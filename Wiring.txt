@@ -1,0 +1,22 @@
+Arduino to Breadboard -
+5V -> Breadboard +
+GND -> Breadboard -
+
+MQ-2 to Arduino - 
+A0 -> A0
+D0 -> Pin 2
+
+GND -> Breadboard - 
+VCC -> Breadboard +
+
+HC-05 to Arduino -
+RX -> Pin 11
+TX -> Pin 10
+GND -> GND
+
+5V  -> Breadboard +
+
+ESP32 to Arduino -
+GND -> GND
+
+Power -> USB/Breadboard +            
