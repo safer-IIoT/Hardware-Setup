@@ -1,8 +1,8 @@
 #pragma once
 
 // Wi-Fi
-#define WIFI_SSID                  "SLT-Fiber-2.4G_d1e0"
-#define WIFI_PASSWORD              "code7976"
+#define WIFI_SSID                  ""
+#define WIFI_PASSWORD              ""
 #define ESP32_DEVICE_HOSTNAME      "esp32-edge"
 
 // HC-05 input
