@@ -1,22 +1,27 @@
-Arduino to Breadboard -
-5V -> Breadboard +
+Arduino to MB-102 -
+5V -> 5V
+GND -> GND
+
+MB-102 to Breadboard -
+5V -> Breadboard Left Red Rail
+3.3V -> Breadboard Right Red Rail
 GND -> Breadboard -
 
 MQ-2 to Arduino - 
 A0 -> A0
 D0 -> Pin 2
-
 GND -> Breadboard - 
-VCC -> Breadboard +
+VCC -> Breadboard Left Red Rail
 
 HC-05 to Arduino -
 RX -> Pin 11
 TX -> Pin 10
 GND -> GND
+5V  -> Breadboard Left Red Rail
 
-5V  -> Breadboard +
+ESP32 to Breadboard -
+GND -> Breadboard -
 
-ESP32 to Arduino -
-GND -> GND
+Breadboard - -> Breadboard -
 
-Power -> USB/Breadboard +            
+Power -> Arduino            
