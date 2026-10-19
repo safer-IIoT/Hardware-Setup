@@ -1,262 +1,139 @@
-#include "BluetoothSerial.h"
 #include <WiFi.h>
-#include "esp_log.h"
-#include "config.h"
-#include <RTClib.h>
-
 #include <Firebase_ESP_Client.h>
-#include <addons/TokenHelper.h>
-#include <addons/RTDBHelper.h>
-#include <WiFiClientSecure.h>
-#include <ArduinoJson.h>
+#include "time.h"
+#include "addons/TokenHelper.h"
+#include "addons/RTDBHelper.h"
 
-BluetoothSerial ESP_BT;
-uint8_t hc05_address[] = HC05_ADDRESS;
-
-volatile bool isWifiLinked = false; 
-volatile bool wifiDisconnected = false;
-String latest15SecArray = "";
-portMUX_TYPE dataMutex = portMUX_INITIALIZER_UNLOCKED;
+#include "config.h"
 
 FirebaseData fbdo;
 FirebaseAuth auth;
-FirebaseConfig fbConfig;
+FirebaseConfig config;
 
-RTC_DS3231 rtc;
+unsigned long sendDataPrevMillis = 0;
+const unsigned long sendInterval = 60000;
 
-void connectToWiFi(void * pvParameters);
-void connectToHC05(void * pvParameters);
-void WiFiEvent(WiFiEvent_t event);
-void sendToFirebase(String jsonPayload, String targetDate);
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 19800;
+const int   daylightOffset_sec = 0; 
 
-void setup() 
-{
-  esp_log_level_set("*", ESP_LOG_NONE); 
+String getFormattedTimestamp();
+void verifyNetworkConnectivity();
+
+void setup() {
   Serial.begin(115200);
-  delay(1000);
-  
-  //Connect to Wi-Fi
-  WiFi.onEvent(WiFiEvent);
-  xTaskCreatePinnedToCore(connectToWiFi, "WiFiTask", 12288, NULL, 1, NULL, 0);
 
-  //Connect to Arduino <-> HC-05
-  xTaskCreatePinnedToCore(connectToHC05, "BluetoothTask", 4096, NULL, 1, NULL, 1);
-}
+  pinMode(32, INPUT);
 
-void loop() 
-{
-  vTaskDelay(pdMS_TO_TICKS(1000)); 
-}
-
-void WiFiEvent(WiFiEvent_t event) {
-  switch(event) {
-    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-      wifiDisconnected = true;
-      isWifiLinked = false;
-      break;
-    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-      wifiDisconnected = false;
-      break;
-    default:
-      break;
-  }
-}
-
-//Checks whether Wi-Fi is connected
-void connectToWiFi(void * pvParameters)
-{
-  Serial.println("Wi-Fi setup initialized.");
-  
-  bool wasConnected = false;
-
-  WiFi.persistent(false);
-  WiFi.disconnect(true);
-  WiFi.mode(WIFI_STA);
-  WiFi.setTxPower(WIFI_POWER_11dBm); 
+  // Connect to Wi-Fi network
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.print("Connecting to Wi-Fi");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.println("Not connected to Wi-Fi");
+    delay(300);
+  }
+  Serial.println("Connected to Wi-Fi");
+
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  Serial.println("Synchronizing time via NTP");
+  struct tm timeinfo;
+  while (!getLocalTime(&timeinfo, 5000)) { 
+    Serial.println("Time was not synchronized");
+    delay(500);
+  }
+  Serial.println("Time was synchronized");
+
+  config.api_key = API_KEY;
+  config.database_url = DATABASE_URL;
+  auth.user.email = EMAIL;
+  auth.user.password = PASSWORD;
+
+  config.token_status_callback = tokenStatusCallback; 
+
+  // Set safe SSL buffer margins to minimize memory overhead crashes
+  fbdo.setBSSLBufferSize(2048 /* Rx */, 2048 /* Tx */);
   
-  int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 50) 
-  {
-    vTaskDelay(pdMS_TO_TICKS(500));
-    attempts++;
-  }
-
-  if (WiFi.status() == WL_CONNECTED) 
-  {
-    WiFi.setSleep(false);
-    fbConfig.host = FIREBASE_HOST;
-    fbConfig.signer.tokens.legacy_token = FIREBASE_AUTH;
-    Firebase.begin(&fbConfig, &auth);
-    Firebase.reconnectWiFi(true);    
-    isWifiLinked = true;
-    Serial.println("Wi-Fi connected successfully"); 
-  } 
-  else 
-  {
-    wifiDisconnected = true;
-  }
-
-  DynamicJsonDocument firebaseDoc(8192);
-  JsonArray firebaseMasterArray = firebaseDoc.to<JsonArray>();
-  
-  uint32_t lastFirebaseSend = millis();
-  uint32_t lastConnectionCheck = millis();
-
-  DateTime now = rtc.now();
-  char dateBuffer[12]; 
-  sprintf(dateBuffer, "%04d/%02d/%02d", now.year(), now.month(), now.day());
-  String currentBatchDate = String(dateBuffer);
-
-  while(1) 
-  {
-    vTaskDelay(pdMS_TO_TICKS(10000));
-    uint32_t currentMillis = millis();
-
-    if (isWifiLinked) {
-      if (currentMillis - lastFirebaseSend >= 60000) 
-      {
-        lastFirebaseSend = currentMillis;
-
-        if (firebaseMasterArray.size() > 0) 
-        {
-          JsonDocument finalFirebaseDoc;
-          finalFirebaseDoc["node_id"] = NODE_ID;
-          finalFirebaseDoc["readings"] = firebaseMasterArray;
-
-          String firebaseOutput;
-          serializeJson(finalFirebaseDoc, firebaseOutput);
-          sendToFirebase(firebaseOutput, currentBatchDate);
-
-          firebaseDoc.clear();
-          firebaseMasterArray = firebaseDoc.to<JsonArray>();
-          }
-      }
-    }
-  }
-
-  bool isDown = (wifiDisconnected || WiFi.status() != WL_CONNECTED);
-
-  if (!isDown) 
-  {
-    int currentRSSI = WiFi.RSSI();
-    if (currentRSSI >= 0) 
-    { 
-      isDown = true; 
-    }
-  }
-
-  if (isDown) 
-  {
-    if (wasConnected) 
-    {
-      Serial.println("Wi-Fi link lost. (Bluetooth will keep running independently)...");
-      wasConnected = false; 
-    }
-    
-    WiFi.disconnect(true);
-    vTaskDelay(pdMS_TO_TICKS(1000)); 
-    
-    WiFi.mode(WIFI_STA);
-    WiFi.setTxPower(WIFI_POWER_11dBm);
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    
-    int retryAttempts = 0;
-    while (WiFi.status() != WL_CONNECTED && retryAttempts < 30) 
-    { 
-      vTaskDelay(pdMS_TO_TICKS(500));
-      retryAttempts++;
-    }
-    
-    if (WiFi.status() == WL_CONNECTED && WiFi.RSSI() < 0) 
-    {
-      WiFi.setSleep(false);
-      wifiDisconnected = false; 
-      wasConnected = true;
-      Serial.println("Wi-Fi reconnected successfully.");
-    }    
-  } 
-  else 
-  {
-    wasConnected = true;
-    wifiDisconnected = false;
-    isWifiLinked = true;
-    Serial.print("[RSSI: ");
-    Serial.print(WiFi.RSSI());
-    Serial.println(" dBm] Wi-Fi Link stable.");
-  }
+  Firebase.begin(&config, &auth);
+  Firebase.reconnectWiFi(true);
+  Firebase.RTDB.setMaxRetry(&fbdo, 5);          
 }
 
-//Checks whether Arduino <-> HC-05 is connected
-void connectToHC05(void * pvParameters) 
-{
-  Serial.println("Bluetooth setup initialized. Standing by for initial Wi-Fi link...");
+void loop() {
+  verifyNetworkConnectivity();
 
-  while (!isWifiLinked) 
-  {
-    vTaskDelay(pdMS_TO_TICKS(100)); 
-  }
-  
-  Serial.println("Wi-Fi link verified. Starting Bluetooth setup.");
+  unsigned long currentMillis = millis();
 
-  // Initialize Bluetooth hardware once
-  if (!ESP_BT.begin("ESP32_Master", true)) 
-  {
-    Serial.println("Error: Bluetooth failed to initialize.");
-    vTaskDelete(NULL); 
-  }
-  Serial.println("Connecting to HC-05...");
+  if (Firebase.ready() && (currentMillis - sendDataPrevMillis > sendInterval || sendDataPrevMillis == 0)) {
+    sendDataPrevMillis = currentMillis;
 
-  while(1) 
-  {
-    if (!ESP_BT.connected()) 
-    {
-      Serial.println("Attempting to reconnect to HC-05...");
+    int rawAnalogValue = analogRead(32); 
+    int calibratedGasScore = map(rawAnalogValue, 0, 3102, 0, 100);
+    calibratedGasScore = constrain(calibratedGasScore, 0, 100);
+
+    FirebaseJsonArray arr;
+    arr.add(calibratedGasScore); 
+
+    FirebaseJson logEntry;
+    logEntry.set("values", arr);
+
+    String timeKey = getFormattedTimestamp();
+    if (timeKey == "") {
+      timeKey = "fallback_" + String(currentMillis);
+    }
+
+    String currentPath = "/data/" + timeKey;
+    Serial.printf("Writing log entry to path: %s\n", currentPath.c_str());
+
+    bool success = false;
+    int retryCount = 0;
+    const int maxRetries = 3; 
+    
+    while (!success && retryCount < maxRetries) {
+      verifyNetworkConnectivity();
       
-      if (ESP_BT.connect(hc05_address)) 
-      {
-        Serial.println("Connected securely to Arduino <-> HC-05");
-      } 
-      else 
-      {
-        Serial.println("Not connected to Arduino <-> HC-05. Retrying...");
-        vTaskDelay(pdMS_TO_TICKS(2000)); 
-        continue; 
+      if (Firebase.ready()) {
+        success = Firebase.RTDB.setJSON(&fbdo, currentPath.c_str(), &logEntry);
+      }
+      
+      if (success) {
+        Serial.println("Data successfully saved");
+      } else {
+        retryCount++;
+        Serial.printf("Data saving attempt %d failed. Reason: %s\n", retryCount, fbdo.errorReason().c_str());
+        if (retryCount < maxRetries) {
+          delay(2000 * retryCount); 
+        }
       }
     }
+  }
 
-    if (ESP_BT.available()) 
-    {
-      String incomingData = ESP_BT.readStringUntil('\n');
-      incomingData.trim(); 
-      Serial.println(incomingData);
+  delay(10);
+}
 
-      if (incomingData.length() > 0) 
-      {
-        latest15SecArray = incomingData;
-      }
+
+void verifyNetworkConnectivity() {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("Re-establishing network handshake");
+    WiFi.disconnect();
+    WiFi.reconnect();
+    
+    unsigned long startTimeout = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - startTimeout < 8000) {
+      delay(200);
+      Serial.println("Not connected to Wi-Fi");
     }
-
-    vTaskDelay(pdMS_TO_TICKS(10));
+    Serial.println("Wi-Fi restabilized.");
   }
 }
 
-void sendToFirebase(String jsonPayload, String targetDate) 
-{
-  if (Firebase.ready()) 
-  {
-    String path = "/nodes/" + String(NODE_ID) + "/" + targetDate;
-    
-    FirebaseJson firebaseJsonObj;
-    firebaseJsonObj.setJsonData(jsonPayload);
-    
-    if (Firebase.RTDB.pushJSON(&fbdo, path, &firebaseJsonObj)) 
-    {
-      Serial.println("→ [Firebase] 1-Min Nested Aggregation Complete.");
-    } 
-    else 
-    {
-      Serial.printf("Firebase error: %s\n", fbdo.errorReason().c_str());
-    }
+String getFormattedTimestamp() {
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    Serial.println("Failed to obtain local time from internal clock");
+    return "";
   }
+  
+  char buffer[32];
+  strftime(buffer, sizeof(buffer), "%Y%m%d%H%M%S", &timeinfo);
+  return String(buffer);
 }
