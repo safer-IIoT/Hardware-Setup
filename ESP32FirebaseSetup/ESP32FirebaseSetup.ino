@@ -5,15 +5,16 @@
 #include "addons/RTDBHelper.h"
 
 #include "config.h"
+#include "secretconfig.h"
 
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 
 unsigned long sendDataPrevMillis = 0;
-const unsigned long sendInterval = 60000;
+const unsigned long sendInterval = INTERVAL;
 
-const char* ntpServer = "pool.ntp.org";
+const char* ntpServer = NTP_SERVER;
 const long  gmtOffset_sec = 19800;
 const int   daylightOffset_sec = 0; 
 
@@ -81,7 +82,7 @@ void loop() {
       timeKey = "fallback_" + String(currentMillis);
     }
 
-    String currentPath = "/data/" + timeKey;
+    String currentPath = String("/data/") + DEVICE_ID + String("/") + timeKey;
     Serial.printf("Writing log entry to path: %s\n", currentPath.c_str());
 
     bool success = false;
