@@ -24,7 +24,7 @@ void verifyNetworkConnectivity();
 void setup() {
   Serial.begin(115200);
 
-  pinMode(32, INPUT);
+  pinMode(4, INPUT);
 
   // Connect to Wi-Fi network
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -67,7 +67,7 @@ void loop() {
   if (Firebase.ready() && (currentMillis - sendDataPrevMillis > sendInterval || sendDataPrevMillis == 0)) {
     sendDataPrevMillis = currentMillis;
 
-    int rawAnalogValue = analogRead(32); 
+    int rawAnalogValue = analogRead(4); 
     int calibratedGasScore = map(rawAnalogValue, 0, 3102, 0, 100);
     calibratedGasScore = constrain(calibratedGasScore, 0, 100);
 
