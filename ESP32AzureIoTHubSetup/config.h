@@ -4,6 +4,7 @@
 #define TX_PIN                     17
 
 #define ESP32_DEVICE_HOSTNAME      "esp32-edge"
+#define IOTHUB_INTERVAL            15000
 
 // HC-05 input
 #define HC05_BUILTIN_READER        0

@@ -15,7 +15,7 @@ const char* IOTHUBHOST = IOT_HUB_HOST;
 const char* DEVICEID = DEVICE_ID;
 const char* DEVICEKEY = DEVICE_KEY;
 
-const uint32_t PUBLISH_INTERVAL_MS = 15000;
+const uint32_t PUBLISH_INTERVAL_MS = IOTHUB_INTERVAL;
 const uint32_t SAS_TTL_S           = 3600;    // token lifetime (renewed automatically)
 const size_t   NUM_VALUES          = 15;
 const long     TIME_OFFSET_S       = 0;

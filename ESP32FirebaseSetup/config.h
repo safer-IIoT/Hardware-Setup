@@ -16,4 +16,5 @@
 
 #define DEVICE_ID                  "esp32-01"
 #define NTP_SERVER                 "pool.ntp.org"
-#define INTERVAL                   60000
+#define FIREBASE_INTERVAL          60000
+#define IOTHUB_INTERVAL            15000

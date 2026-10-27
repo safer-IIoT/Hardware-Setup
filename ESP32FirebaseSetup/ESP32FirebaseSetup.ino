@@ -12,7 +12,7 @@ FirebaseAuth auth;
 FirebaseConfig config;
 
 unsigned long sendDataPrevMillis = 0;
-const unsigned long sendInterval = INTERVAL;
+const unsigned long sendInterval = FIREBASE_INTERVAL;
 
 const char* ntpServer = NTP_SERVER;
 const long  gmtOffset_sec = 19800;
@@ -70,7 +70,7 @@ void loop() {
   int calibratedGasScore = map(rawAnalogValue, 0, 3102, 0, 100);
   calibratedGasScore = constrain(calibratedGasScore, 0, 100);
 
-  if(currentMillis - sendDataPrevMillis > 15000)
+  if(currentMillis - sendDataPrevMillis > IOTHUB_INTERVAL)
   {
     sendDataPrevMillis = currentMillis;
     Serial1.print(calibratedGasScore);
