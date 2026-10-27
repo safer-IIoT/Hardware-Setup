@@ -169,6 +169,8 @@ void setup() {
   connectWiFi();
   syncTime();
 
+  Serial1.begin(115200, SERIAL_8N1, RX_PIN, TX_PIN);
+
   tls.setCACert(AZURE_ROOT_CA);
   mqtt.setServer(IOTHUBHOST, 8883);
   mqtt.setBufferSize(1024);
@@ -183,6 +185,11 @@ void setup() {
 }
 
 void loop() {
+  if (Serial1.available() > 0) {
+    String incomingData = Serial1.readStringUntil('\n');
+    Serial.println(incomingData);
+  }
+  
   ensureAzure();
   mqtt.loop();
 
@@ -192,5 +199,6 @@ void loop() {
       lastPublishMs = millis();
     publishValues();
   }
+
   delay(10);
 }

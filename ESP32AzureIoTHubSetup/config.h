@@ -1,5 +1,7 @@
 #pragma once
 
+#define RX_PIN                     16
+#define TX_PIN                     17
 
 #define ESP32_DEVICE_HOSTNAME      "esp32-edge"
 

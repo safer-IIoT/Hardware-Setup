@@ -1,6 +1,8 @@
 #pragma once
 
 #define ESP32_DEVICE_HOSTNAME      "esp32-edge"
+#define RX_PIN                     18
+#define TX_PIN                     17
 
 // HC-05 input
 #define HC05_BUILTIN_READER        0

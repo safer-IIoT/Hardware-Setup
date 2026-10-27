@@ -44,6 +44,8 @@ void setup() {
   }
   Serial.println("Time was synchronized");
 
+  Serial1.begin(115200, SERIAL_8N1, RX_PIN, TX_PIN);
+
   config.api_key = API_KEY;
   config.database_url = DATABASE_URL;
   auth.user.email = EMAIL;
@@ -64,12 +66,19 @@ void loop() {
 
   unsigned long currentMillis = millis();
 
+  int rawAnalogValue = analogRead(4); 
+  int calibratedGasScore = map(rawAnalogValue, 0, 3102, 0, 100);
+  calibratedGasScore = constrain(calibratedGasScore, 0, 100);
+
+  if(currentMillis - sendDataPrevMillis > 15000)
+  {
+    sendDataPrevMillis = currentMillis;
+    Serial1.print(calibratedGasScore);
+    Serial.println(calibratedGasScore);
+  }
+
   if (Firebase.ready() && (currentMillis - sendDataPrevMillis > sendInterval || sendDataPrevMillis == 0)) {
     sendDataPrevMillis = currentMillis;
-
-    int rawAnalogValue = analogRead(4); 
-    int calibratedGasScore = map(rawAnalogValue, 0, 3102, 0, 100);
-    calibratedGasScore = constrain(calibratedGasScore, 0, 100);
 
     FirebaseJsonArray arr;
     arr.add(calibratedGasScore); 
