@@ -1,7 +1,7 @@
 #pragma once
 
-#define RX_PIN                     16
-#define TX_PIN                     17
+#define RX_PIN                     25
+#define TX_PIN                     26
 
 #define ESP32_DEVICE_HOSTNAME      "esp32-edge"
 #define IOTHUB_INTERVAL            15000
