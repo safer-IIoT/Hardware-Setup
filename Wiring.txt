@@ -1,27 +1,27 @@
-Arduino to MB-102 -
-5V -> 5V
-GND -> GND
+ESP32S3 -
+ESP32S3 Pin 2 -> Breadboard b6
+ESP32S3 GND -> Breadboard - rail
+ESP32S3 Pin 4 -> Breadboard i15
+ESP32S3 Pin 5 (TX) -> Breadboard d19
+ESP32S3 Pin 6 (RX) -> Breadboard h4
 
-MB-102 to Breadboard -
-5V -> Breadboard Left Red Rail
-3.3V -> Breadboard Right Red Rail
-GND -> Breadboard -
+ESP32 -
+ESP32 Pin 25 (RX) -> Breadboard b19
+ESP32 GND -> Breadboard - rail
+ESP32 Pin 4 (RX) -> Breadboard i15
 
-MQ-2 to Arduino - 
-A0 -> A0
-D0 -> Pin 2
-GND -> Breadboard - 
-VCC -> Breadboard Left Red Rail
+MQ-2 - 
+MQ-2 VCC -> Breadboard + rail
+MQ-2 GND -> Breadboard - rail
+MQ-2 AO -> Breadboard f9
 
-HC-05 to Arduino -
-RX -> Pin 11
-TX -> Pin 10
-GND -> GND
-5V  -> Breadboard Left Red Rail
+Arduino -
+Arduino 5V -> Breadboard + rail
+Arduino GND -> Breadboard - rail
 
-ESP32 to Breadboard -
-GND -> Breadboard -
+Breadboard a14 -> Breadboard - rail
 
-Breadboard - -> Breadboard -
+Resistors - g9 to g15, h15 to Breadboard - rail, d6 to d10
+LED - c10 to c14
 
-Power -> Arduino            
+Power -> Arduino, ESP32S3, ESP32            
