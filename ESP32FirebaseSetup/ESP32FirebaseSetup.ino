@@ -6,12 +6,15 @@
 
 #include "config.h"
 #include "secretconfig.h"
+#include "mq2_lr_model.h"
 
 constexpr int MQ_2_PIN = 4;
 constexpr uint32_t BAUDRATE = 115200;
 constexpr size_t IOTHUB_NUM_VALUES = IOTHUB_INTERVAL/ 1000;
 constexpr size_t FIREBASE_NUM_VALUES = FIREBASE_INTERVAL/ 1000;
 constexpr int DECIMALS = 4;
+constexpr int LED_PIN = 2;
+constexpr float DIVIDER_RATIO = 2.0f;
 
 static_assert(RX_PIN != MQ_2_PIN && TX_PIN != MQ_2_PIN, "UART pins must not use the MQ-2 sensor pin");
 
@@ -28,14 +31,17 @@ double firebaseValues[FIREBASE_NUM_VALUES] = {0};
 unsigned long lastReadMillis = 0;
 size_t currentESP32Reading = 0;
 size_t currentFirebaseReading = 0;
+float mlWindow[mq2lr::WINDOW];
 
 String getFormattedTimestamp();
 void verifyNetworkConnectivity();
 
-// ---------- sensor ----------
 void readSensorValue(double* esp32Values, double* firebaseValues) {
   int raw = analogRead(MQ_2_PIN);
   double score = constrain((raw * 100.0 / 3102.0), 0.0, 100.0);
+
+  mlWindow[currentESP32Reading] = mq2lr::countsFromMilliVolts(analogReadMilliVolts(MQ_2_PIN), DIVIDER_RATIO);
+
   esp32Values[currentESP32Reading++] = score;
   firebaseValues[currentFirebaseReading++] = score;
 }
@@ -113,6 +119,10 @@ void setup() {
 
   Serial1.begin(BAUDRATE, SERIAL_8N1, RX_PIN, TX_PIN);
 
+  pinMode(LED_PIN, OUTPUT);
+  analogReadResolution(12);
+  analogSetPinAttenuation(MQ_2_PIN, ADC_11db);
+
   /*connectWiFi();
 
   configTime(gmtOffsetSec, daylightOffsetSec, ntpServer);
@@ -150,6 +160,13 @@ void loop() {
     {
       sendDoubles(Serial1, values, IOTHUB_NUM_VALUES);
       Serial.println("Sent sensor readings");
+
+      float p[mq2lr::N_CLASSES];
+      mq2lr::GasClass c = mq2lr::classify(mlWindow, p);
+      bool smoke = (c == mq2lr::SMOKE || c == mq2lr::MIXTURE);
+      digitalWrite(LED_PIN, smoke ? HIGH : LOW);
+      Serial.printf("edge: %s (%.0f%%)\n", mq2lr::CLASS_NAMES[c], 100 * p[c]);
+
       currentESP32Reading = 0;
     }
   }
