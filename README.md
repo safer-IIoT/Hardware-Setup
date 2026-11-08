@@ -38,21 +38,21 @@ The following needs to be followed to configure it:
 1. Go to the [Firebase Console](https://console.firebase.google.com/) and create a new project. Name it ```Safer```.
 2. Navigate to the Realtime Database and click Create Database. Select Start in locked mode and Enable.
 3. Set read/write rules to true
-4. Copy your Database URL (Host Name) and your Database Secret (found under Project Settings > Service Accounts > Database Secrets) and save it under the ```DATABASE_URL``` variable and the ```API_KEY``` variable respectively in [secretconfig.h](/ESP32FirebaseSetup/secretconfig.h).
-5. In Authentication menu of the console, select Sign-in method tab and select Add New Provider. In it, add Email/Password provider to authenticate and make it enabled. 
-6. Then select Users tab and select Add User. Create a user with an email and a password. Save them under the ```EMAIL``` variable and the ```PASSWORD``` variable respectively in [secretconfig.h](/ESP32FirebaseSetup/secretconfig.h).
-7. In Project Overview menu of the console, select the General tab and select Add app. Then select Web and give a name and create.
+4. In Project Overview menu of the console, select the General tab and select Add app. Then select Web and give a name and create.
+5. Copy your Database URL (Host Name). Under the General tab, scroll down to the Your apps section. Copy the exact string found in the ```apiKey``` field of your Web App configuration. Save those under the ```DATABASE_URL``` variable and the ```API_KEY``` variable respectively in [secretconfig.h](/ESP32FirebaseSetup/secretconfig.h).
+6. In Authentication menu of the console, select Sign-in method tab and select Add New Provider. In it, add Email/Password provider to authenticate and make it enabled. 
+7. Then select Users tab and select Add User. Create a user with an email and a password. Save them under the ```EMAIL``` variable and the ```PASSWORD``` variable respectively in [secretconfig.h](/ESP32FirebaseSetup/secretconfig.h).
 
 ### Sample data
 
-The JSON model of the database will be
+The JSON model of the database is:
 
 ```json
 {
   "data": {
     "esp32-01": {  // name of the node    
       "20261030200011": { // timestamp
-        "values": [ //double array containing data of last 1 minute
+        "values": [ // double array containing data of the last 1 minute
           0.934880722,
           0.419084462,
           1.38620245,
