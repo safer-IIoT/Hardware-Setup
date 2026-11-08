@@ -110,6 +110,7 @@ void connectWiFi() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   while (WiFi.status() != WL_CONNECTED) {
     Serial.println("Wi-Fi not connected");
+    delay(10);
   }
   Serial.printf("Wi-Fi: connected, IP %s\n", WiFi.localIP().toString().c_str());
 }
@@ -123,7 +124,7 @@ void setup() {
   analogReadResolution(12);
   analogSetPinAttenuation(MQ_2_PIN, ADC_11db);
 
-  /*connectWiFi();
+  connectWiFi();
 
   configTime(gmtOffsetSec, daylightOffsetSec, ntpServer);
   Serial.println("Synchronizing time via NTP");
@@ -144,11 +145,11 @@ void setup() {
 
   Firebase.begin(&config, &auth);
   Firebase.reconnectWiFi(true);
-  Firebase.RTDB.setMaxRetry(&fbdo, 5);*/
+  Firebase.RTDB.setMaxRetry(&fbdo, 5);
 }
 
 void loop() {
-  //verifyNetworkConnectivity();
+  verifyNetworkConnectivity();
   unsigned long now = millis();
 
   if (now - lastReadMillis >= 1000) 
@@ -171,10 +172,10 @@ void loop() {
     }
   }
 
-  /*if (currentFirebaseReading == FIREBASE_NUM_VALUES) {
+  if (currentFirebaseReading == FIREBASE_NUM_VALUES) {
     logToFirebase(firebaseValues, FIREBASE_NUM_VALUES);
     currentFirebaseReading = 0;
-  }*/
+  }
 
   delay(10);
 }
