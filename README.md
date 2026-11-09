@@ -31,7 +31,7 @@ The following hardware need to be wired to complete the setup.
 
 ## Firebase database
 
-The Firebase database will store data received from ESP32S3. These will be 15 second MQ-2 sensor data that were collected per every 1 minute, i.e. in every 1 minute 60 sensor data will be saved. The database will be used by the Android application to read these data when the link between it and Azure services is unavailable.
+The Firebase database will store data received from ESP32S3. These will be 15 second MQ-2 sensor data that were collected per every second up to 1 min, i.e. in every 1 minute 60 sensor data will be saved. The database will be used by the Android application to read these data when the link between it and Azure services is unavailable.
 
 The following needs to be followed to configure it:
 
@@ -118,4 +118,30 @@ The JSON model of the database is:
     }
   }
 }
+```
+
+## Azure IoT Hub
+
+IoT Hub is used to store data received every 15 sec from ESP32. These will be 15 second MQ-2 sensor data that were collected every second. This will be used by the Android application to read these data.
+
+The following needs to be followed to configure the hub in Azure:
+
+1. Sign in at [portal.azure.com](https://portal.azure.com/) and choose Create a resource → IoT Hub → Create.
+2. Pick your subscription.
+   - Create a resource group, e.g. ```rg-gas-iot```.
+   - Enter a hub name that’s unique across Azure; it becomes <name>.azure-devices.net.
+   - Choose a nearby region, e.g. Southeast Asia or Central India.
+3. Tier: Free (F1)
+4. Networking: keep Public access on. Management: keep the defaults and leave TLS minimum at 1.2. Then choose Review + create → Create.
+5. Open the hub, then go to Device management → Devices → Add device:
+   - Set the Device ID to ```esp32-01```. It must exactly match ```DEVICE_ID``` in the sketch.
+   - Set authentication type to Symmetric key and turn Auto-generate keys on.
+   - Choose Save.
+6. Open the device and copy its Primary key into ```DEVICE_KEY```. On the hub’s Overview page, copy the Hostname into ```IOT_HUB_HOST``` in [secretconfig.h](/ESP32AzureIoTHubSetup/secretconfig.h).
+
+To watch messages that were published, open Azure Cloud Shell and run:
+
+```cli
+az extension add --name azure-iot
+az iot hub monitor-events -n <hub-name> -d esp32-01
 ```
