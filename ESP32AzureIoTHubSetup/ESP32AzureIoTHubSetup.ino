@@ -379,10 +379,10 @@ bool connectAzure()
 
   mqttUser = iotHubHost + String("/") + deviceId + "/?api-version=2021-04-12";
 
-  Serial.printf("Azure: connecting to %s ... ", IOTHUBHOST);
+  Serial.println(String("Azure: connecting to ...") + iotHubHost);
   if (!mqtt.connect(DEVICEID, mqttUser.c_str(), sas.c_str())) 
   {
-    Serial.printf("failed, state=%d\n", mqtt.state());
+    logError("Failed to connect to IoT Hub, state= "  + String(mqtt.state()));
     return false;
   }
   
