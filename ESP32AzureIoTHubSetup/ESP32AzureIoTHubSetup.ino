@@ -356,7 +356,6 @@ void handleNTP()
     struct tm timeinfo;
     gmtime_r(&now, &timeinfo);
     strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S UTC", &timeinfo);
-    Serial.printf("Current time: %s\n", timestamp);
   }
 }
 
@@ -467,6 +466,25 @@ void publishValues()
   }
 }
 
+void connectWiFi() 
+{
+  WiFi.disconnect(true, true);
+  delay(100);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFISSID, WIFIPASSWORD);
+}
+
+void connectIoTHub()
+{
+  tls.setCACert(AZURE_ROOT_CA);
+  mqtt.setServer(IOTHUBHOST, 8883);
+  mqtt.setBufferSize(2048); 
+  mqtt.setKeepAlive(60);
+
+  mqttUser = String(IOTHUBHOST) + "/" + DEVICEID + "/?api-version=2021-04-12";
+  telemetryTopic = String("devices/") + DEVICEID + "/messages/events/$.ct=application%2Fjson&$.ce=utf-8";
+}
+
 void setup() 
 {
   logInfo("Beginning ESP32 process");
@@ -476,6 +494,11 @@ void setup()
   Serial.begin(115200);
   delay(500);
 
+  Serial1.begin(BAUDRATE, SERIAL_8N1, 25, 26);
+  Serial1.setRxBufferSize(1024);
+
+  logInfo("Serial initialization ended");
+
   if (LittleFS.begin(true)) 
   {
     fsMounted = true;
@@ -483,32 +506,18 @@ void setup()
   } 
   else 
   {
-    Serial.println("[ERROR] LittleFS mount failed!");
+    logError("LittleFS mount failed!");
   }
-
-  Serial1.begin(BAUDRATE, SERIAL_8N1, 25, 26);
-  Serial1.setRxBufferSize(1024);
-
-  logInfo("Serial initialization ended");
 
   logInfo("Wi-Fi initialization started");
 
-  WiFi.disconnect(true, true);
-  delay(100);
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFISSID, WIFIPASSWORD);
+  connectWiFi();
 
   logInfo("Wi-Fi initialization ended");
 
   logInfo("Azure IoT Hub initialization started");
 
-  tls.setCACert(AZURE_ROOT_CA);
-  mqtt.setServer(IOTHUBHOST, 8883);
-  mqtt.setBufferSize(2048); 
-  mqtt.setKeepAlive(60);
-
-  mqttUser = String(IOTHUBHOST) + "/" + DEVICEID + "/?api-version=2021-04-12";
-  telemetryTopic = String("devices/") + DEVICEID + "/messages/events/$.ct=application%2Fjson&$.ce=utf-8";
+  connectIoTHub();
 
   logInfo("Azure IoT Hub initialization ended");
 
