@@ -21,7 +21,7 @@ constexpr float DIVIDER_RATIO = 2.0f;
 static_assert(RX_PIN != MQ_2_PIN && TX_PIN != MQ_2_PIN, "UART pins must not use the MQ-2 sensor pin");
 
 const char* ntpServer = NTP_SERVER;
-const long  gmtOffsetSec = 19800;   // UTC+5:30
+const long TIME_OFFSET_S = 19800;   // UTC+5:30
 const int   daylightOffsetSec = 0;
 
 FirebaseData   fbdo;
@@ -34,6 +34,10 @@ unsigned long lastReadMillis = 0;
 size_t currentESP32Reading = 0;
 size_t currentFirebaseReading = 0;
 float mlWindow[mq2lr::WINDOW];
+bool fsMounted = false;
+bool timeSynced = false;
+static uint32_t lastPrintTime = 0;
+static uint32_t lastRetryTime = 0;
 
 String getFormattedTimestamp();
 void handleWiFi();
@@ -205,7 +209,7 @@ void connectWiFi()
   WiFi.disconnect(true, true);
   delay(100);
   WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFISSID, WIFIPASSWORD);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 }
 
 void handleNTP() 
@@ -256,6 +260,16 @@ void setup()
   pinMode(LED_PIN, OUTPUT);
   analogReadResolution(12);
   analogSetPinAttenuation(MQ_2_PIN, ADC_11db);
+
+  if (LittleFS.begin(false)) 
+  {
+    fsMounted = true;
+    logInfo("LittleFS mounted successfully");
+  } 
+  else 
+  {
+    logError("LittleFS mount failed!");
+  }
 
   logInfo("Wi-Fi initialization started");
 
@@ -345,7 +359,7 @@ void handleWiFi()
     {
       lastRetryTime = currentTime;
       logInfo("Re-issuing fresh Wi-Fi connect request");
-      WiFi.begin(WIFISSID, WIFIPASSWORD);
+      WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
     }
   }
 }
