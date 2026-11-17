@@ -236,16 +236,6 @@ void pollLink()
   }
 }
 
-void waitPolling(uint32_t ms) 
-{
-  uint32_t start = millis();
-  while (millis() - start < ms) 
-  {
-    pollLink();
-    delay(5);
-  }
-}
-
 String encodeUrl(const String& in) 
 {
   const char* hex = "0123456789ABCDEF";
